@@ -4,109 +4,152 @@ import re
 import html
 
 def strip_html_tags(text: str) -> str:
-    """Remove HTML tags from the given text.
-
-    Args:
-        text (str): The input text containing HTML tags.
-
-    Returns:
-        str: The text with HTML tags removed.
+    """
+    Remove HTML tags from the given text.
     """
 
     return re.sub(r"<[^>]+>", "", text)
 
 def html_unescape(text: str) -> str:
-    """Unescape HTML entities in the given text.
-
-    Args:
-        text (str): The input text containing HTML entities.
-
-    Returns:
-        str: The text with HTML entities unescaped.
+    """
+    Unescape HTML entities in the given text.
     """
     
     return html.unescape(text)
 
 def normalize_whitespace(text: str) -> str:
-    """Normalize whitespace in the given text.
-
-    Args:
-        text (str): The input text containing irregular whitespace.
-
-    Returns:
-        str: The text with normalized whitespace.
+    """
+    Normalize whitespace in the given text.
     """
     return ' '.join(text.split())
 
 def extract_company(message: dict) -> str:
-    """Extract company name from the email message.
-
-    Args:
-        message (dict): The email message represented as a dictionary with keys 'subject' and 'from'.
-
-    Returns:
-        string variable stating the company name.
-        
+    """
+    Extract company name from the email message.
     """
     subject = message.get("subject", "")
     punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
-    # from_msg = message["from"].lower()
 
     if " at " in subject and " to " in subject:
-        return "".join(subject.split(" at ")[-1].strip(punctuations))
-    elif " - application" in subject:
-            return " ".join(subject.split(" - ")[0]).strip(punctuations)
+        return " ".join(subject.split(" at ")[-1].split()).strip(punctuations)
+    elif " at " in subject:
+        return " ".join(subject.split(" at ")[-1].split()).strip(punctuations)
+    elif " - application" in subject.lower():
+            return " ".join(subject.split(" - ")[0].split()).strip(punctuations)
     elif " to " in subject:
         return " ".join(subject.split(" to ")[-1].split()).strip(punctuations)
     elif " from " in subject:
         return " ".join(subject.split(" from ")[-1].split()).strip(punctuations)
+    elif " - we" in subject.lower():
+        return " ".join(subject.split(" - ")[0].split()).strip(punctuations)
     else:
-         pass
-    # elif "<" in from_msg and ">" in from_msg:
-    #     return from_msg.split("<")[0].strip().title()
-    
-    # Intend to implement using body text to check for company name
+         return company_check_body(message.get("body", ""))
 
-    # Current Fallback
-    return "Unknown Company"
+def company_check_body(message: str) -> str:
+     """
+     Fallsback extractor when the subject line doesn't include the company.Extract company name from the email message body.
+     NEED TO ADD MORE CONDITIONS HERE
+     """
+     punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+     clean_body_text = normalize_whitespace(html_unescape(strip_html_tags(message))).lower()
+     if "thank you for your interest in" in clean_body_text:
+        company = clean_body_text.split("thank you for your interest in")[-1].split(".")[0]
+        return company.strip(punctuations).strip().title()
+     return "Unknown Company"
 
-def extract_position(message: dict) -> str:
-    """Extract position title from the email message.
-
-    Args:
-        message (dict): The email message represented as a dictionary with keys 'subject' and 'from'.
-
-    Returns:
-        string variable stating the position title.
-        
+def extract_position(message: dict, company: str) -> str:
+    """
+    Extract position title from the email message.
     """
     subject_value = message.get("subject", "").lower()
     body_value = message.get("body", "").lower()
     subject = f"{subject_value}"
     text = f"{body_value}"
+    punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
 
-    clean_body_text = normalize_whitespace(html_unescape(strip_html_tags(text))).lower()
-    
+    clean_body_text = normalize_whitespace(html_unescape(strip_html_tags(text)))
+    print("subject: ", subject)
     if " to " in subject and " at " in subject:
         return subject.split(" to ")[-1].split(" at ")[0].title()
     elif " regarding " in subject:
         return subject.split(" regarding ")[-1].split(" at ")[0].title()
-    # elif " about " in subject:
-    #     return subject.split(" about ")[-1].split(" at ")[0].title()
+    elif " update on your application for " in subject and " at " in subject:
+        return subject.split(" update on your application for ")[-1].split(" at ")[0].title().strip(punctuations).strip()
+    elif " the role of " in subject and " at " in subject:
+        return subject.split(" the role of ")[-1].split(" at ")[0].title().strip(punctuations).strip()
+    elif " your application for " in subject.lower() and " - " in subject:
+        return subject.split(" your application for ")[-1].split(" - ")[0].title()
     else:
-        return position_check_body(clean_body_text)
-        
-    # return "Unknown Position"
+        print("company: ", company)
+        return position_check_body(clean_body_text, company=company)
 
-def position_check_body(message: str) -> str:
+def position_check_body(message: str, company: str) -> str:
      """
-     Extract position title from the email message body.
+     Fallback extractor when the subject line doesn't include the role.
+     This handles ATS and LinkedIn confirmation emails where the role
+     only appears in the body.
      """
-     body_value = message
-     if "to our " in body_value and " position" in body_value:
-         return body_value.split("to our")[-1].split("position")[0].title()
-     elif "to the " in body_value and " position" in body_value:
-         return body_value.split("to the")[-1].split("position")[0].title()
+     punctuations = '''!()-[]{};:'"\,<>./?@#$%^&*_~'''
+     clean_body_text = normalize_whitespace(html_unescape(strip_html_tags(message))).lower()
+     company_lc = company.lower()
+
+     if "was sent to" in clean_body_text:
+        sent_index = clean_body_text.find("was sent to")
+        first_index = clean_body_text.find(company_lc, sent_index)
+        if first_index != -1:
+            second_index = clean_body_text.find(company_lc, first_index + len(company_lc))
+            if second_index != -1:
+                position = clean_body_text[
+                    first_index + len(company_lc):second_index
+                ].strip(punctuations).strip()
+
+                if 1 <= len(position.split()) <= 6:
+                    return position.title()
+
+     if "application for the" in clean_body_text and " at " in clean_body_text:
+        position = clean_body_text.split("application for the")[-1].split(" at ")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "your application for" in clean_body_text and "[new grads welcome]" in clean_body_text:
+        position = clean_body_text.split("your application for")[-1] \
+                                  .split("[new grads welcome]")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "for applying to the" in clean_body_text and "role!" in clean_body_text:
+        position = clean_body_text.split("for applying to the")[-1].split("role!")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "application to the" in clean_body_text and "position" in clean_body_text:
+        position = clean_body_text.split("application to the")[-1].split("position")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "thank you for applying for the" in clean_body_text and "position" in clean_body_text:
+        position = clean_body_text.split("thank you for applying for the")[-1] \
+                                  .split("position")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "to our" in clean_body_text and "position" in clean_body_text and "apply" in clean_body_text:
+        position = clean_body_text.split("to our")[-1].split("position")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 6:
+            return position.title()
+
+     if "to the" in clean_body_text and "position" in clean_body_text:
+        position = clean_body_text.split("to the")[-1].split("position")[0]
+        position = position.strip(punctuations).strip()
+        if 1 <= len(position.split()) <= 5:
+            return position.title()
+
      return "Unknown Position"
 
 def send_job_event(message: dict, category: str) -> dict:
@@ -115,7 +158,7 @@ def send_job_event(message: dict, category: str) -> dict:
     Returns the payload that was sent.
     """
     company = extract_company(message)
-    position = extract_position(message)
+    position = extract_position(message, company=company)
     recieved_at = message.get('date')
 
     payload ={
