@@ -2,6 +2,17 @@
 from email.mime import message
 import re
 import html
+import requests
+from datetime import datetime
+from email.utils import parsedate_to_datetime
+import os
+from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
+
+load_dotenv()
+JOBTRACKER_API_URL = os.getenv("JOBTRACKER_API_URL")
 
 def strip_html_tags(text: str) -> str:
     """
@@ -152,14 +163,27 @@ def position_check_body(message: str, company: str) -> str:
 
      return "Unknown Position"
 
-def send_job_event(message: dict, category: str) -> dict:
+def parse_received_at(date_str: str) -> str:
+    """
+    Parse the received_at date string to the desired format.
+    """
+    if not date_str:
+        return None
+    try:
+        dt = parsedate_to_datetime(date_str)
+        return dt.astimezone().isoformat()
+    except Exception:
+        return None
+
+
+def send_job_event(message: dict, category: str, dry_run: bool = True) -> dict:
     """
     Build and send a job event to the JobTracker API.
     Returns the payload that was sent.
     """
     company = extract_company(message)
     position = extract_position(message, company=company)
-    recieved_at = message.get('date')
+    received_at = parse_received_at(message.get("date"))
 
     payload ={
         'source': 'gmail',
@@ -167,8 +191,23 @@ def send_job_event(message: dict, category: str) -> dict:
         'category': category,
         'company': company,
         'position': position,
-        'recieved_at': recieved_at,
+        'received_at': received_at,
         'raw_subject': message.get('subject', ''),
     }
-    print(payload)
+    logger.info("Sending job event", extra={"payload": payload})
+    
+    if dry_run:
+        return payload
+
+    response = requests.post(
+        f"{JOBTRACKER_API_URL}/events",
+        json=payload,
+        timeout=5,
+    )
+
+    if response.status_code not in (200, 201, 409):
+        raise RuntimeError(
+            f"JobTracker API error {response.status_code}: {response.text}"
+        )
+
     return payload
