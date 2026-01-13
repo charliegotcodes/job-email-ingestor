@@ -28,16 +28,37 @@ def _parse_message(gmail, message_id):
     }
 
 def _get_body_text(payload: dict) -> str:
-    if "parts" in payload:
-        for part in payload['parts']:
-            if part.get('mimeType') == 'text/plain':
-                data = part['body'].get('data', '')
-                if data:
-                    return base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
-    else:
-        data = payload.get('body', {}).get('data', '')
-        if data:
-            return base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
+    """
+    Recursively extract email body from Gmail payload.
+    Prefers text/plain, falls back to text/html.
+    """
+
+    if not payload:
+        return ""
+
+    body = payload.get("body", {}).get("data")
+    if body:
+        return base64.urlsafe_b64decode(body).decode("utf-8", errors="ignore")
+
+    parts = payload.get("parts", [])
+    for part in parts:
+        mime_type = part.get("mimeType", "")
+
+        if mime_type == "text/plain":
+            data = part.get("body", {}).get("data")
+            if data:
+                return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+
+        if mime_type == "text/html":
+            data = part.get("body", {}).get("data")
+            if data:
+                return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+            
+        if part.get("parts"):
+            nested = _get_body_text(part)
+            if nested:
+                return nested
+
     return ""
 
 def read_recent_messages(gmail, max_results):
