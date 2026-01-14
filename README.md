@@ -61,17 +61,18 @@ Config Management: Environment variables (python-dotenv)
 * Decoupled architecture separating ingestion from storage
 
 ### Project Structure
-
+```
 job-email-ingestor/
 ├── ingestor/
-│   ├── main.py            # Entry point
-│   ├── clients/           # External service clients (Gmail, Job Tracker API)
-│   ├── parsers/           # Email parsing and normalization logic
-│   ├── classifiers/       # Job lifecycle classification rules
-│   └── config.py          # Environment and settings
+│ ├── main.py # Entry point
+│ ├── clients/ # External service clients (Gmail, Job Tracker API)
+│ ├── parsers/ # Email parsing and normalization logic
+│ ├── classifiers/ # Job lifecycle classification rules
+│ └── config.py # Environment and settings
 ├── .env.example
 ├── requirements.txt
 └── README.md
+```
 
 ### Setup & Installation
 
