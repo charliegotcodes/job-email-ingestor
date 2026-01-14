@@ -15,6 +15,7 @@ It is designed to be:
 * Fault-tolerant (graceful handling of malformed data or API failures)
 
 ### Architecture
+```
 Email Source (Gmail API)
         |
         v
@@ -31,7 +32,7 @@ Job Tracker API (FastAPI)
         |
         v
 Relational Database (PostgreSQL / SQLite)
-
+```
 
 ### Tech Stack
 
