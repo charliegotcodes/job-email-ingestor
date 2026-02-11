@@ -1,20 +1,18 @@
-Job Email Ingestor
+# Job Email Ingestor
 
 A backend service that ingests job-related emails, classifies them into lifecycle events, and forwards structured data to a downstream Job Tracker API for persistence and analysis.
-
 This project focuses on reliability, data normalization, and maintainable API-driven design rather than UI.
 
-Overview
+## Overview
 
 The Job Email Ingestor monitors incoming emails (e.g., application confirmations, rejections, interview requests), extracts relevant metadata, classifies each email into a job lifecycle stage, and emits a normalized event to a Job Tracker API.
 
 The system is designed to be:
 
 Idempotent – duplicate emails are ignored using external event identifiers
-
 Extensible – new classification rules and providers can be added modularly
-
 Resilient – malformed data is logged and skipped without stopping ingestion
+
 ### Architecture
 ```
 Email Source (Gmail API)
@@ -56,10 +54,10 @@ Config Management: Environment variables (python-dotenv)
 ### Key Features
 
 * Email ingestion pipeline that fetches and parses structured and unstructured email content
-* Lifecycle classification (e.g. Applied, Interview, Rejected, Offer)
-* Idempotent event delivery using external IDs to prevent duplicate records
-* Schema validation to ensure data integrity before persistence
-* Centralized logging and error handling for observability
+* Rule-based lifecycle classification (Applied, Interview, Rejected, Offer)
+* Idempotent event emission using external message IDs to prevent duplicate records
+* Schema validation before sending data to the Job Tracker API
+* Centralized logging for observability and debugging
 * Decoupled architecture separating ingestion from storage
 
 ### Project Structure
@@ -107,15 +105,15 @@ The service will:
 2. Parse and classify job-related messages
 3. Send normalized lifecycle events to the Job Tracker API
 
-#### Error Handling & Reliability
+### Error Handling & Reliability
 
-* Emails that fail parsing are logged and skipped without stopping the pipeline
-* Duplicate emails are ignored via idempotent event keys
-* Downstream API failures are logged with retry-safe behavior
+* Parsing failures are logged and skipped without stopping the pipeline
+* Duplicate emails are ignored via idempotent external IDs
+* Downstream API failures are logged to preserve visibility
 
-### Future Improvements
+###Future Improvements
 
-* Rule-based → ML-assisted classification
+* ML-assisted classification
 * Support for additional email providers
 * Retry queue for transient API failures
 * Metrics and health-check endpoints
