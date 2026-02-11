@@ -1,19 +1,20 @@
-# Job Email Ingestor
+Job Email Ingestor
 
 A backend service that ingests job-related emails, classifies them into lifecycle events, and forwards structured data to a downstream Job Tracker API for persistence and analysis.
 
-This project focuses on reliability, data normalization, and maintainable API-driven design, rather than UI.
+This project focuses on reliability, data normalization, and maintainable API-driven design rather than UI.
 
-## Overview
+Overview
 
-The Job Email Ingestor monitors incoming emails (e.g. application confirmations, rejections, interview requests), extracts relevant metadata, classifies the email into a job lifecycle stage, and emits a normalized event to a Job Tracker API.
+The Job Email Ingestor monitors incoming emails (e.g., application confirmations, rejections, interview requests), extracts relevant metadata, classifies each email into a job lifecycle stage, and emits a normalized event to a Job Tracker API.
 
-It is designed to be:
+The system is designed to be:
 
-* Idempotent (safe to reprocess emails)
-* Extensible (new categories and providers can be added)
-* Fault-tolerant (graceful handling of malformed data or API failures)
+Idempotent – duplicate emails are ignored using external event identifiers
 
+Extensible – new classification rules and providers can be added modularly
+
+Resilient – malformed data is logged and skipped without stopping ingestion
 ### Architecture
 ```
 Email Source (Gmail API)
